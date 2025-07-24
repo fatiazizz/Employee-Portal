@@ -40,7 +40,8 @@ class RecommendationRequestShowPageController extends Controller
                     'name'  => $recommendation->approver->name,
                     'email' => $recommendation->approver->email,
                 ] : null,
-            ],
+            ], 
+            'user'=> $recommendation->user,
         ]);
     }
 }

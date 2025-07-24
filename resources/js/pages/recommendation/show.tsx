@@ -11,7 +11,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 export default function RecommendationShow() {
-    const { data, auth } = usePage<any>().props;
+    const { data, user, auth } = usePage<any>().props;
     console.log('auth', auth);
     console.log('data', data);
     const isAdmin = auth?.user?.is_admin === 1;
@@ -122,9 +122,9 @@ export default function RecommendationShow() {
                 </p>
                 <br />
                 <p>
-                    This letter is to confirm that <strong>{data.employeeName || '...Employee Name...'}</strong> has been employed with IT Company as
-                    a <strong>{data.department.department.name || '...Job Title...'}</strong> from{' '}
-                    <strong>{data.start_date || '...Start Date...'}</strong> to <strong>{data.end_date || 'present'}</strong>.
+                    This letter is to confirm that <strong>{data.employeeName || '...Employee Name...'}</strong> has been employed with <strong>IT Company</strong> at 
+                     <strong> {data.department.department.name || '...Job Title...'} Department </strong> from   {' '}
+                    <strong>{user.start_at || '...Start Date...'}</strong> to <strong>{user.end_at || 'present'}</strong> .
                 </p>
                 <p>
                     During this period, he/she has been a valued member of our team, performing his/her duties and responsibilities in a professional
@@ -135,11 +135,11 @@ export default function RecommendationShow() {
                 </p>
                 <br />
                 <p>Sincerely,</p>
+                {/*<p>
+                    <strong>{data.employeeName} </strong>
+                </p> */}
                 <p>
-                    <strong>{data.employeeName}</strong>
-                </p>
-                <p>
-                    <strong>{data.department.department.name}</strong>
+                    <strong>{data.department.department.name} Manager</strong>
                 </p>
                 <p>IT Company</p>
             </div>
