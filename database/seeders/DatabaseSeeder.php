@@ -16,6 +16,8 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             VehicleDriverRelationSeeder::class,
+            CountrySeeder::class,
+            ProductTemplateSeeder::class,
         ]);
     }
 }

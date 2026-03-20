@@ -6,6 +6,9 @@ use App\Http\Controllers\Manager\ManagerUsersShowPageController;
 use App\Http\Controllers\Admin\DepartemanListPageController;
 use App\Http\Controllers\Admin\UsersShowPageController;
 use App\Http\Controllers\Admin\WarehouseListPageController;
+use App\Http\Controllers\Admin\WarehouseReportPageController;
+use App\Http\Controllers\Admin\WarehouseInventoryPageController;
+use App\Http\Controllers\Admin\AdminProductRequestsPageController;
 use App\Http\Controllers\Admin\VehicleListPageController;
 use App\Http\Controllers\Admin\DriverListPageController;
 use App\Http\Controllers\DashboardController;
@@ -57,6 +60,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             */
             Route::get('/', [UsersListPageController::class, 'index'])->name('admin.users.list');
             Route::get('/{id}', [UsersShowPageController::class, 'show'])->name('admin.users.show');
+            Route::post('{id}/reset-password', [UsersShowPageController::class, 'resetPassword'])->name('admin.users.resetPassword');
             Route::post('{id}/manager', [UsersShowPageController::class, 'updateManager'])->name('admin.users.updateManager');
             Route::post('/{id}/make-admin', [UsersShowPageController::class, 'makeAdmin']);
             Route::post('{id}/leave-balance', [UsersShowPageController::class, 'setLeaveBalance']);
@@ -64,6 +68,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('{id}/change-status', [UsersShowPageController::class, 'setChangeStatus']);
             Route::post('{id}/change-status-end-job', [UsersShowPageController::class, 'setChangeStatusEndJob']);
             Route::post('{id}/update-job-info', [UsersShowPageController::class, 'setUpdateJobInfo']);
+            Route::delete('{id}', [UsersShowPageController::class, 'destroy'])->name('admin.users.destroy');
         });
         Route::prefix('departments')->group(function () {
             /*
@@ -100,16 +105,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         });
         Route::prefix('warehouse')->group(function () {
-            /*
-            |--------------------------------------------------------------------------
-            | Pages (Inertia)
-            |--------------------------------------------------------------------------
-            */
-            Route::get('/', [WarehouseListPageController::class, 'index'])->name('admin.department.list');
-            Route::post('create', [WarehouseListPageController::class, 'create'])->name('admin.department.create');
-            Route::post('/{id}/update-quantity', [WarehouseListPageController::class, 'updateQuantity']);
-
+            Route::get('/', [WarehouseListPageController::class, 'index'])->name('admin.warehouse.index');
+            Route::get('/search-products', [WarehouseListPageController::class, 'searchProductTemplates']);
+            Route::get('/search-countries', [WarehouseListPageController::class, 'searchCountries']);
+            Route::post('/', [WarehouseListPageController::class, 'store'])->name('admin.warehouse.store');
+            Route::put('/{id}', [WarehouseListPageController::class, 'update'])->name('admin.warehouse.update');
+            Route::delete('/{id}', [WarehouseListPageController::class, 'destroy'])->name('admin.warehouse.destroy');
         });
+        Route::get('/warehouse-report', [WarehouseReportPageController::class, 'index'])->name('admin.warehouse.report');
+        Route::get('/warehouse-inventory', [WarehouseInventoryPageController::class, 'index'])->name('admin.warehouse.inventory');
+        Route::get('/product-requests', [AdminProductRequestsPageController::class, 'index'])->name('admin.product-requests.index');
     });
 
     Route::prefix('manager')->group(function () {

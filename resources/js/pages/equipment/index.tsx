@@ -9,8 +9,10 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 const statusStyles: Record<string, string> = {
     pending: 'bg-yellow-100 text-yellow-700',
-    approved: 'bg-green-100 text-green-700',
+    approved: 'bg-blue-100 text-blue-700',
     rejected: 'bg-red-100 text-red-700',
+    final_approval: 'bg-green-100 text-green-700',
+    final_rejection: 'bg-red-100 text-red-700',
 };
 
 export default function EquipmentList() {
@@ -22,12 +24,12 @@ export default function EquipmentList() {
 
             <div className="px-6 py-4">
                 <div className="mb-4 flex items-center justify-between">
-                    <h1 className="text-xl font-bold text-gray-800">Equipment Requests</h1>
+                    <h1 className="text-xl font-bold text-gray-800">Product Requests</h1>
                     <Link
                         href="/equipment-request/create"
                         className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
                     >
-                        + New Equipment Request
+                        + New Product Request
                     </Link>
                 </div>
 

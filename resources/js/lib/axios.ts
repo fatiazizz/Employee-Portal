@@ -10,10 +10,10 @@ function getCookie(name: string): string | null {
   return null;
 }
 
-// ایجاد اینستنس اصلی axios
+// Use relative URL so requests go to the same origin as the page (avoids localhost vs 127.0.0.1 mismatch)
 const api = axios.create({
-  baseURL: 'http://127.0.0.1:8000', // آدرس بک‌اند خودت رو اینجا بزن
-  withCredentials: true, // ارسال کوکی‌ها مثل laravel_session و XSRF-TOKEN
+  baseURL: '',
+  withCredentials: true,
   headers: {
     'X-Requested-With': 'XMLHttpRequest',
     Accept: 'application/json',

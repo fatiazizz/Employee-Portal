@@ -8,8 +8,11 @@ use App\Models\DepartmentUser;
 use App\Models\LeaveBalance;
 use App\Models\User;
 use Carbon\Carbon;
-use Inertia\Inertia;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rules;
+use Inertia\Inertia;
 
 class UsersShowPageController extends Controller
 {
@@ -124,5 +127,47 @@ class UsersShowPageController extends Controller
         ]);
 
         return response()->json(['message' => 'User Role SUCCESS.']);
+    }
+
+    /**
+     * Reset a single user's password (admin only).
+     */
+    public function resetPassword(Request $request, $id): JsonResponse
+    {
+        $currentUser = $request->user();
+        if (!$currentUser->is_admin) {
+            abort(403, 'Access denied');
+        }
+
+        $request->validate([
+            'password' => ['required', 'confirmed', Rules\Password::defaults()],
+        ]);
+
+        $user = User::findOrFail($id);
+        $user->forceFill([
+            'password' => Hash::make($request->password),
+        ])->save();
+
+        return response()->json(['message' => 'Password reset successfully.']);
+    }
+
+    /**
+     * Delete a user (admin only). Cannot delete self.
+     */
+    public function destroy(Request $request, $id)
+    {
+        $currentUser = $request->user();
+        if (!$currentUser->is_admin) {
+            abort(403, 'Access denied');
+        }
+
+        if ((int) $id === (int) $currentUser->id) {
+            abort(403, 'You cannot delete your own account.');
+        }
+
+        $user = User::findOrFail($id);
+        $user->delete();
+
+        return redirect()->route('admin.users.list');
     }
 }

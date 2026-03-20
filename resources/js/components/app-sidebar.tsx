@@ -25,9 +25,9 @@ const mainNavItems: NavItem[] = [
         icon: ScrollText, // نامه معرفی
     },
     {
-        title: 'Equipment Request',
+        title: 'Product Request',
         href: '/equipment-request',
-        icon: ClipboardList, // نامه تجهیزات
+        icon: ClipboardList,
     },
     {
         title: 'Vehicle Request',
@@ -60,7 +60,22 @@ const footerNavItems: NavItem[] = [
         href: '/admin/warehouse',
         icon: Warehouse,
     },
-          {
+    {
+        title: 'Warehouse Report',
+        href: '/admin/warehouse-report',
+        icon: ClipboardList,
+    },
+    {
+        title: 'Warehouse Inventory',
+        href: '/admin/warehouse-inventory',
+        icon: ClipboardList,
+    },
+    {
+        title: 'Product Requests',
+        href: '/admin/product-requests',
+        icon: ClipboardList,
+    },
+    {
         title: 'Driver',
         href: '/admin/driver',
         icon: CarIcon,

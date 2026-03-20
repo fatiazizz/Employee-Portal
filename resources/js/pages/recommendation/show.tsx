@@ -115,14 +115,14 @@ export default function RecommendationShow() {
                 id="recommendation-print"
             >
                 <p>
-                    <strong>From:</strong> IT Company
+                    <strong>From:</strong> Atlantic Star Company
                 </p>
                 <p>
                     <strong>To:</strong> {data.to || '...receiver...'}
                 </p>
                 <br />
                 <p>
-                    This letter is to confirm that <strong>{data.employeeName || '...Employee Name...'}</strong> has been employed with <strong>IT Company</strong> at 
+                    This letter is to confirm that <strong>{data.employeeName || '...Employee Name...'}</strong> has been employed by <strong> Atlantic Star Company</strong> at 
                      <strong> {data.department.department.name || '...Job Title...'} Department </strong> from   {' '}
                     <strong>{user.start_at || '...Start Date...'}</strong> to <strong>{user.end_at || 'present'}</strong> .
                 </p>
@@ -131,7 +131,7 @@ export default function RecommendationShow() {
                     and dedicated manner.
                 </p>
                 <p>
-                    Should you require any further information, please feel free to contact us at <strong>HR@ITcompany.com</strong>.
+                    If you require any further information, please feel free to contact us at <strong>HR@ITcompany.com</strong>.
                 </p>
                 <br />
                 <p>Sincerely,</p>
@@ -141,7 +141,7 @@ export default function RecommendationShow() {
                 <p>
                     <strong>{data.department.department.name} Manager</strong>
                 </p>
-                <p>IT Company</p>
+                <p>Atlantic Star Company</p>
             </div>
 
             {/* Modal */}
