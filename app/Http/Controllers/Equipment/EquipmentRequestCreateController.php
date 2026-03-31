@@ -3,33 +3,44 @@
 namespace App\Http\Controllers\Equipment;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use App\Models\EquipmentRequest;
-use App\Models\EquipmentBalance;
-use Carbon\Carbon;
+use App\Models\ProductTemplate;
+use App\Models\WarehouseItem;
+use Illuminate\Http\Request;
 
 class EquipmentRequestCreateController extends Controller
 {
     public function store(Request $request)
     {
-       $user = $request->user();
+        $user = $request->user();
 
-$validated = $request->validate([
-    'items' => ['required', 'array', 'min:1'],
-    'items.*.type' => ['required', 'string', 'in:case,monitor,mouse,keyboard,printer,cartridge'],
-    'items.*.quantity' => ['required', 'integer', 'min:1'],
-]);
+        $validated = $request->validate([
+            'items' => ['required', 'array', 'min:1'],
+            'items.*.product_template_id' => ['required', 'integer', 'exists:product_templates,id'],
+            'items.*.product_name' => ['required', 'string'],
+            'items.*.quantity' => ['required', 'integer', 'min:1'],
+        ]);
 
+        foreach ($validated['items'] as $item) {
+            $available = (int) WarehouseItem::where('product_template_id', $item['product_template_id'])
+                ->whereNull('recipient_id')
+                ->sum('quantity');
+            if ($available < $item['quantity']) {
+                return response()->json([
+                    'message' => 'Not enough stock for: ' . $item['product_name'] . ' (available: ' . $available . ')',
+                ], 422);
+            }
+        }
 
         $deviceRequest = EquipmentRequest::create([
-            'user_id'     => $user->id,
+            'user_id' => $user->id,
             'approver_id' => $user->manager_id,
-            'items'       => $validated['items'],
-            'status'      => 'pending',
+            'items' => $validated['items'],
+            'status' => 'pending',
         ]);
 
         return response()->json([
-            'message' => 'Device request submitted successfully.',
+            'message' => 'Request submitted successfully.',
             'data' => $deviceRequest,
         ]);
     }

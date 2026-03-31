@@ -1,6 +1,8 @@
 import AppLayout from '@/layouts/app-layout';
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { type BreadcrumbItem } from '@/types';
+import { useState } from 'react';
+import Modal from '@/components/ui/modal';
 
 const breadcrumbs: BreadcrumbItem[] = [
   { title: 'Dashboard', href: '/dashboard' },
@@ -8,9 +10,18 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 export default function UsersIndex() {
+  const { users, auth } = usePage<any>().props;
+  const [deleteModal, setDeleteModal] = useState<{ id: number; name: string } | null>(null);
 
-const { users } = usePage<any>().props;
-console.log("users",users);
+  const currentUserId = auth?.user?.id;
+
+  const handleDeleteConfirm = () => {
+    if (!deleteModal) return;
+    router.delete(`/admin/users/${deleteModal.id}`, {
+      onSuccess: () => setDeleteModal(null),
+    });
+  };
+
   return (
     <AppLayout breadcrumbs={breadcrumbs}>
       <Head title="Users Overview" />
@@ -66,19 +77,28 @@ console.log("users",users);
                     </div>
                   </td>
                   <td className="px-4 py-2 border text-center">
-  <Link
-    href={`/admin/users/${user.id}`}
-    className="text-blue-600 hover:underline text-sm"
-  >
-    View
-  </Link>
-</td>
+                    <Link
+                      href={`/admin/users/${user.id}`}
+                      className="text-blue-600 hover:underline text-sm mr-2"
+                    >
+                      View
+                    </Link>
+                    {currentUserId !== user.id && (
+                      <button
+                        type="button"
+                        onClick={() => setDeleteModal({ id: user.id, name: user.name })}
+                        className="text-red-600 hover:underline text-sm"
+                      >
+                        Delete
+                      </button>
+                    )}
+                  </td>
                 </tr>
               ))}
 
               {users.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-4 py-3 text-center text-gray-500">
+                  <td colSpan={9} className="px-4 py-3 text-center text-gray-500">
                     No users found.
                   </td>
                 </tr>
@@ -87,6 +107,31 @@ console.log("users",users);
           </table>
         </div>
       </div>
+
+      <Modal show={!!deleteModal} onClose={() => setDeleteModal(null)}>
+        <div className="p-6">
+          <h2 className="mb-4 text-lg font-semibold">Delete user</h2>
+          <p className="mb-4 text-sm text-gray-700">
+            Are you sure you want to delete <strong>{deleteModal?.name}</strong>? This action cannot be undone.
+          </p>
+          <div className="flex justify-end gap-3">
+            <button
+              type="button"
+              className="rounded px-4 py-2 text-gray-600 hover:bg-gray-100"
+              onClick={() => setDeleteModal(null)}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="rounded bg-red-600 px-4 py-2 text-white hover:bg-red-700"
+              onClick={handleDeleteConfirm}
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+      </Modal>
     </AppLayout>
   );
 }
