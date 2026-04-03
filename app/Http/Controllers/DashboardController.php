@@ -93,7 +93,7 @@ class DashboardController extends Controller
             ->merge($vehicleRequests)
             ->merge($recommendationRequests)
             ->merge($equipmentRequests)
-            ->sortByDesc('startDate')
+            ->sortByDesc(fn (array $r) => strtotime($r['CreateDate'] ?? '0'))
             ->take(10)
             ->values();
 
