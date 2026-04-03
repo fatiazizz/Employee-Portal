@@ -1,7 +1,7 @@
 import AppLayout from '@/layouts/app-layout';
 import api from '@/lib/axios';
 import { type BreadcrumbItem } from '@/types';
-import { Head, usePage } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -10,34 +10,92 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Details', href: '#' },
 ];
 
+function statusLabel(status: string): string {
+    switch (status) {
+        case 'manager_approved':
+            return 'Awaiting admin (vehicle & driver)';
+        case 'pending':
+            return 'Pending manager';
+        default:
+            return status.charAt(0).toUpperCase() + status.slice(1);
+    }
+}
+
+function statusClass(status: string): string {
+    if (status === 'approved') {
+        return 'text-green-600';
+    }
+    if (status === 'rejected') {
+        return 'text-red-600';
+    }
+    if (status === 'manager_approved') {
+        return 'text-blue-600';
+    }
+    return 'text-yellow-600';
+}
+
 export default function VehicleShow() {
-    const { data, vehicles, drivers } = usePage<any>().props;
+    const { data } = usePage<any>().props;
     const [formData, setFormData] = useState({
         vehicle_id: '',
         driver_id: '',
     });
 
     const [showModal, setShowModal] = useState(false);
-    const [status, setStatus] = useState(data.status);
-    const [successMessage, setSuccessMessage] = useState<string | null>(null);
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [processing, setProcessing] = useState(false);
 
-    const handleStatusChange = async (newStatus: 'approved' | 'rejected') => {
+    const canAct = data.canManagerAct || data.canAdminAct;
 
+    const parseApiError = (error: any): string => {
+        const d = error.response?.data;
+        if (d?.message) {
+            return d.message;
+        }
+        if (d?.errors) {
+            return Object.values(d.errors)
+                .flat()
+                .filter(Boolean)
+                .join(' ');
+        }
+        return 'Request failed.';
+    };
+
+    const managerSubmit = async (next: 'manager_approved' | 'rejected') => {
+        setErrorMessage(null);
         try {
- 
             setProcessing(true);
-            await api.post(`/vehicle-request/${data.id}/status`, {
-                status: newStatus,
-                vehicle_id: formData.vehicle_id || null,
-                driver_id: formData.driver_id || null,
-            });
-            setStatus(newStatus);
+            await api.post(`/vehicle-request/${data.id}/status`, { status: next });
             setShowModal(false);
-            setSuccessMessage(`Status changed to ${newStatus.toUpperCase()} successfully.`);
-            setTimeout(() => setSuccessMessage(null), 10000);
+            router.reload();
         } catch (error) {
-            console.error('Status change failed:', error);
+            setErrorMessage(parseApiError(error));
+        } finally {
+            setProcessing(false);
+        }
+    };
+
+    const adminSubmit = async (next: 'approved' | 'rejected') => {
+        setErrorMessage(null);
+        if (next === 'approved' && (!formData.vehicle_id || !formData.driver_id)) {
+            setErrorMessage('Select both a vehicle and a driver to approve.');
+            return;
+        }
+        try {
+            setProcessing(true);
+            const body =
+                next === 'rejected'
+                    ? { status: 'rejected' }
+                    : {
+                          status: 'approved',
+                          vehicle_id: Number(formData.vehicle_id),
+                          driver_id: Number(formData.driver_id),
+                      };
+            await api.post(`/vehicle-request/${data.id}/status`, body);
+            setShowModal(false);
+            router.reload();
+        } catch (error) {
+            setErrorMessage(parseApiError(error));
         } finally {
             setProcessing(false);
         }
@@ -50,14 +108,8 @@ export default function VehicleShow() {
             <div className="mx-auto mt-6 w-full max-w-4xl rounded bg-white p-6 shadow">
                 <h1 className="mb-6 text-xl font-bold text-gray-800">Vehicle Request Details</h1>
 
-                {successMessage && (
-                    <div
-                        className={`mb-4 rounded px-4 py-2 text-sm shadow ${
-                            status === 'approved' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                        }`}
-                    >
-                        {successMessage}
-                    </div>
+                {errorMessage && (
+                    <div className="mb-4 rounded bg-red-50 px-4 py-2 text-sm text-red-800 shadow">{errorMessage}</div>
                 )}
 
                 <div className="grid grid-cols-1 gap-6 text-sm text-gray-700 sm:grid-cols-2">
@@ -98,24 +150,24 @@ export default function VehicleShow() {
 
                     <div>
                         <span className="font-medium">Status:</span>
-                        <div
-                            className={`font-semibold ${
-                                status === 'approved' ? 'text-green-600' : status === 'pending' ? 'text-yellow-600' : 'text-red-600'
-                            }`}
-                        >
-                            {status.charAt(0).toUpperCase() + status.slice(1)}
-                        </div>
+                        <div className={`font-semibold ${statusClass(data.status)}`}>{statusLabel(data.status)}</div>
                     </div>
 
                     <div className="sm:col-span-2">
-                        <span className="font-medium">Approver:</span>
+                        <span className="font-medium">Direct manager (first approval):</span>
                         <div className="text-gray-900">{data.approver?.name ?? 'Not assigned'}</div>
                     </div>
                 </div>
-                {status === 'pending' && (
+                {canAct && (
                     <div className="mt-6 flex justify-end">
-                        <button onClick={() => setShowModal(true)} className="rounded bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700">
-                            Change Status
+                        <button
+                            onClick={() => {
+                                setErrorMessage(null);
+                                setShowModal(true);
+                            }}
+                            className="rounded bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
+                        >
+                            {data.canManagerAct ? 'Manager: Approve / Decline' : 'Admin: Assign & finalize'}
                         </button>
                     </div>
                 )}
@@ -123,66 +175,98 @@ export default function VehicleShow() {
 
             {showModal && (
                 <div className="bg-opacity-40 fixed inset-0 z-50 flex items-center justify-center bg-[#00000050]">
-                    <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-lg">
-                        <h2 className="mb-4 text-lg font-semibold text-gray-800">Change Vehicle Request Status</h2>
+                    <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-6 shadow-lg">
+                        {data.canManagerAct && (
+                            <>
+                                <h2 className="mb-2 text-lg font-semibold text-gray-800">Manager decision</h2>
+                                <p className="mb-4 text-sm text-gray-600">
+                                    Approve to send this request to an administrator for vehicle and driver assignment, or decline
+                                    it. You do not assign resources here.
+                                </p>
+                                <div className="flex flex-col gap-3 sm:flex-row">
+                                    <button
+                                        onClick={() => managerSubmit('manager_approved')}
+                                        disabled={processing}
+                                        className="flex-1 rounded bg-green-600 px-4 py-2 text-sm text-white hover:bg-green-700 disabled:opacity-50"
+                                    >
+                                        Approve (forward to admin)
+                                    </button>
+                                    <button
+                                        onClick={() => managerSubmit('rejected')}
+                                        disabled={processing}
+                                        className="flex-1 rounded bg-red-600 px-4 py-2 text-sm text-white hover:bg-red-700 disabled:opacity-50"
+                                    >
+                                        Decline
+                                    </button>
+                                </div>
+                            </>
+                        )}
 
-                        <p className="mb-2 text-sm text-gray-600">Select a vehicle and driver to approve this request:</p>
+                        {data.canAdminAct && (
+                            <>
+                                <h2 className="mb-2 text-lg font-semibold text-gray-800">Administrator</h2>
+                                <p className="mb-4 text-sm text-gray-600">
+                                    Reject without assigning resources, or approve by choosing an available vehicle and driver. Busy
+                                    windows are from trip start through 30 minutes after trip end.
+                                </p>
 
-                        <div className="mb-4 space-y-4">
-                            {/* Vehicle select */}
-                            <div>
-                                <label className="mb-1 block text-sm font-medium">Vehicle</label>
-                                <select
-                                    value={formData.vehicle_id}
-                                    onChange={(e) => setFormData({ ...formData, vehicle_id: e.target.value })}
-                                    className="w-full rounded border px-3 py-2"
-                                >
-                                    <option value="">-- Select Vehicle --</option>
-                                    {data.allVehicles?.map((v: any) => (
-                                        <option key={v.id} value={v.id}>
-                                            {v.name}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
+                                <div className="mb-4 space-y-4">
+                                    <div>
+                                        <label className="mb-1 block text-sm font-medium">Vehicle</label>
+                                        <select
+                                            value={formData.vehicle_id}
+                                            onChange={(e) => setFormData({ ...formData, vehicle_id: e.target.value })}
+                                            className="w-full rounded border px-3 py-2"
+                                        >
+                                            <option value="">-- Select vehicle (required to approve) --</option>
+                                            {data.allVehicles?.map((v: any) => (
+                                                <option key={v.id} value={v.id}>
+                                                    {v.name}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="mb-1 block text-sm font-medium">Driver</label>
+                                        <select
+                                            value={formData.driver_id}
+                                            onChange={(e) => setFormData({ ...formData, driver_id: e.target.value })}
+                                            className="w-full rounded border px-3 py-2"
+                                        >
+                                            <option value="">-- Select driver (required to approve) --</option>
+                                            {data.allDrivers?.map((d: any) => (
+                                                <option key={d.id} value={d.id}>
+                                                    {d.name}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
 
-                            {/* Driver select */}
-                            <div>
-                                <label className="mb-1 block text-sm font-medium">Driver</label>
-                                <select
-                                    value={formData.driver_id}
-                                    onChange={(e) => setFormData({ ...formData, driver_id: e.target.value })}
-                                    className="w-full rounded border px-3 py-2"
-                                >
-                                    <option value="">-- Select Driver --</option>
-                                    {data.allDrivers?.map((d: any) => (
-                                        <option key={d.id} value={d.id}>
-                                            {d.name}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-                        </div>
-
-                        <div className="flex gap-3">
-                            <button
-                                onClick={() => handleStatusChange('approved')}
-                                disabled={processing || !formData.vehicle_id || !formData.driver_id}
-                                className="flex-1 rounded bg-green-600 px-4 py-2 text-sm text-white hover:bg-green-700"
-                            >
-                                Approve
-                            </button>
-                            <button
-                                onClick={() => handleStatusChange('rejected')}
-                                disabled={processing}
-                                className="flex-1 rounded bg-red-600 px-4 py-2 text-sm text-white hover:bg-red-700"
-                            >
-                                Decline
-                            </button>
-                        </div>
+                                <div className="flex flex-col gap-3 sm:flex-row">
+                                    <button
+                                        onClick={() => adminSubmit('approved')}
+                                        disabled={processing || !formData.vehicle_id || !formData.driver_id}
+                                        className="flex-1 rounded bg-green-600 px-4 py-2 text-sm text-white hover:bg-green-700 disabled:opacity-50"
+                                    >
+                                        Approve with assignment
+                                    </button>
+                                    <button
+                                        onClick={() => adminSubmit('rejected')}
+                                        disabled={processing}
+                                        className="flex-1 rounded bg-red-600 px-4 py-2 text-sm text-white hover:bg-red-700 disabled:opacity-50"
+                                    >
+                                        Reject
+                                    </button>
+                                </div>
+                            </>
+                        )}
 
                         <div className="mt-4 text-right">
-                            <button onClick={() => setShowModal(false)} className="text-sm text-gray-500 hover:underline">
+                            <button
+                                onClick={() => setShowModal(false)}
+                                className="text-sm text-gray-500 hover:underline"
+                            >
                                 Cancel
                             </button>
                         </div>

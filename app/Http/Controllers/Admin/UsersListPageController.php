@@ -3,10 +3,9 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
-use App\Models\User;
-
 
 class UsersListPageController extends Controller
 {
@@ -14,28 +13,28 @@ class UsersListPageController extends Controller
     {
         $currentUser = $request->user();
 
-        if (!$currentUser->is_admin) {
+        if (! $currentUser->is_admin) {
             abort(403, 'Access denied');
         }
 
         // گرفتن همه کاربران (به جز مدیر اصلی)
         $users = User::withCount([
-    'leaveRequests',
-    'vehicleRequests',
-    'recommendationRequests',
-    'equipmentRequests',
-])->with([
-    'leaveRequests' => fn($q) => $q->latest()->limit(1),
-    'vehicleRequests' => fn($q) => $q->latest()->limit(1),
-    'recommendationRequests' => fn($q) => $q->latest()->limit(1),
-    'equipmentRequests' => fn($q) => $q->latest()->limit(1),
-])->get();
+            'leaveRequests',
+            'vehicleRequests',
+            'recommendationRequests',
+            'equipmentRequests',
+        ])->with([
+            'leaveRequests' => fn ($q) => $q->latest()->limit(1),
+            'vehicleRequests' => fn ($q) => $q->latest()->limit(1),
+            'recommendationRequests' => fn ($q) => $q->latest()->limit(1),
+            'equipmentRequests' => fn ($q) => $q->latest()->limit(1),
+        ])->get();
 
         $userList = $users->map(function ($user) {
             return [
                 'id' => $user->id,
                 'name' => $user->name,
-                'code' => 'EMP00' . $user->id,
+                'code' => 'EMP00'.$user->id,
                 'email' => $user->email,
                 'leave_count' => $user->leave_requests_count,
                 'vehicle_count' => $user->vehicle_requests_count,

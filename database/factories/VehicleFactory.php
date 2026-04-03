@@ -34,9 +34,9 @@ class VehicleFactory extends Factory
                 'Lexus IS300',
                 'Genesis G70',
             ]),
-            'plate_number' => strtoupper($this->faker->bothify('##??###')), 
+            'plate_number' => strtoupper($this->faker->bothify('##??###')),
             'type' => $this->faker->randomElement(['sedan', 'SUV', 'hatchback', 'coupe', 'pickup']),
-            'is_active' => $this->faker->boolean(90),
+            'is_active' => false,
         ];
     }
 }

@@ -1,13 +1,13 @@
 <?php
+
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class Driver extends Model
 {
-        use HasFactory;
+    use HasFactory;
 
     protected $fillable = [
         'name',
@@ -16,4 +16,11 @@ class Driver extends Model
         'is_active',
     ];
 
+    protected $attributes = [
+        'is_active' => false,
+    ];
+
+    protected $casts = [
+        'is_active' => 'boolean',
+    ];
 }

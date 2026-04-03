@@ -7,30 +7,34 @@ use App\Models\Department;
 use App\Models\DepartmentUser;
 use App\Models\LeaveBalance;
 use App\Models\User;
-use Carbon\Carbon;
-use Inertia\Inertia;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rules;
+use Inertia\Inertia;
 
 class UsersShowPageController extends Controller
 {
     public function show($id)
     {
         $user = User::with('manager', 'leaveBalance', 'department')->findOrFail($id);
-        $allUsers = User::where("is_manager", 1)->select('id', 'name')->get();
+        $allUsers = User::where('is_manager', 1)->select('id', 'name')->get();
         $departeman = Department::get();
-        $departemanUser = DepartmentUser::where("user_id",$id)->first();
+        $departemanUser = DepartmentUser::where('user_id', $id)->first();
 
         return Inertia::render('admin/users/show', [
             'user' => $user,
             'departeman' => $departeman,
             'departeman_user' => $departemanUser ? $departemanUser : null,
             'allUsers' => $allUsers, // برای انتخاب مدیر جدید
+            'admin_user_count' => User::where('is_admin', 1)->count(),
         ]);
     }
+
     public function updateManager(Request $request, $id)
     {
         $request->validate([
-            'manager_id' => 'nullable|exists:users,id|not_in:' . $id,
+            'manager_id' => 'nullable|exists:users,id|not_in:'.$id,
         ]);
 
         $user = \App\Models\User::findOrFail($id);
@@ -42,11 +46,37 @@ class UsersShowPageController extends Controller
 
     public function makeAdmin(Request $request, $id)
     {
+        if (! $request->user()->is_admin) {
+            abort(403, 'Access denied');
+        }
+
         $user = User::findOrFail($id);
         $user->is_admin = 1;
         $user->save();
 
         return response()->json(['message' => 'User granted admin access.']);
+    }
+
+    public function revokeAdmin(Request $request, $id): JsonResponse
+    {
+        if (! $request->user()->is_admin) {
+            abort(403, 'Access denied');
+        }
+
+        $user = User::findOrFail($id);
+
+        if (! $user->is_admin) {
+            return response()->json(['message' => 'User is not an administrator.'], 422);
+        }
+
+        if (User::where('is_admin', 1)->count() <= 1) {
+            return response()->json(['message' => 'You cannot remove the last administrator.'], 422);
+        }
+
+        $user->is_admin = 0;
+        $user->save();
+
+        return response()->json(['message' => 'Admin access removed.']);
     }
 
     public function setManagerStatus($id, Request $request)
@@ -88,13 +118,11 @@ class UsersShowPageController extends Controller
         ]);
     }
 
-
-
     public function setChangeStatus(Request $request, $id)
     {
         $user = User::findOrFail($id);
-        $user->status = !$user->status;
-        if (!$user->start_at) {
+        $user->status = ! $user->status;
+        if (! $user->start_at) {
             $user->start_at = now();
         }
         $user->save();
@@ -102,12 +130,11 @@ class UsersShowPageController extends Controller
         return response()->json(['message' => 'User change status.']);
     }
 
-
     public function setChangeStatusEndJob(Request $request, $id)
     {
         $user = User::findOrFail($id);
         $user->status = 0;
-        if (!$user->end_at) {
+        if (! $user->end_at) {
             $user->end_at = now();
         }
         $user->save();
@@ -118,11 +145,53 @@ class UsersShowPageController extends Controller
     public function setUpdateJobInfo(Request $request, $id)
     {
         DepartmentUser::create([
-            "user_id" => $id,
-            "department_id" => $request->department_id,
-            "role" => $request->job_title,
+            'user_id' => $id,
+            'department_id' => $request->department_id,
+            'role' => $request->job_title,
         ]);
 
         return response()->json(['message' => 'User Role SUCCESS.']);
+    }
+
+    /**
+     * Reset a single user's password (admin only).
+     */
+    public function resetPassword(Request $request, $id): JsonResponse
+    {
+        $currentUser = $request->user();
+        if (! $currentUser->is_admin) {
+            abort(403, 'Access denied');
+        }
+
+        $request->validate([
+            'password' => ['required', 'confirmed', Rules\Password::defaults()],
+        ]);
+
+        $user = User::findOrFail($id);
+        $user->forceFill([
+            'password' => Hash::make($request->password),
+        ])->save();
+
+        return response()->json(['message' => 'Password reset successfully.']);
+    }
+
+    /**
+     * Delete a user (admin only). Cannot delete self.
+     */
+    public function destroy(Request $request, $id)
+    {
+        $currentUser = $request->user();
+        if (! $currentUser->is_admin) {
+            abort(403, 'Access denied');
+        }
+
+        if ((int) $id === (int) $currentUser->id) {
+            abort(403, 'You cannot delete your own account.');
+        }
+
+        $user = User::findOrFail($id);
+        $user->delete();
+
+        return redirect()->route('admin.users.list');
     }
 }

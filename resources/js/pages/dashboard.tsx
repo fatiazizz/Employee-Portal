@@ -70,10 +70,12 @@ export default function Dashboard() {
                                                 ? 'bg-green-100 text-green-700'
                                                 : req.status === 'rejected'
                                                   ? 'bg-red-100 text-red-700'
-                                                  : 'bg-yellow-100 text-yellow-700'
+                                                  : req.status === 'manager_approved'
+                                                    ? 'bg-blue-100 text-blue-800'
+                                                    : 'bg-yellow-100 text-yellow-700'
                                         }`}
                                     >
-                                        {req.status}
+                                        {req.status === 'manager_approved' ? 'Awaiting admin' : req.status}
                                     </span>
                                 </td>
                                 <td className="px-4 py-3">

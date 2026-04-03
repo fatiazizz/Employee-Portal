@@ -9,13 +9,20 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 const statusStyles: Record<string, string> = {
     pending: 'bg-yellow-100 text-yellow-700',
+    manager_approved: 'bg-blue-100 text-blue-800',
     approved: 'bg-green-100 text-green-700',
-    rejected: 'bg-red-100 text-red-700', // fix: status is 'declined' not 'rejected'
+    rejected: 'bg-red-100 text-red-700',
 };
+
+function formatVehicleStatus(status: string): string {
+    if (status === 'manager_approved') {
+        return 'Awaiting admin';
+    }
+    return status;
+}
 
 export default function VehicleList() {
     const { vehicleRequests } = usePage<any>().props;
-    console.log("vehicleRequests",vehicleRequests)
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Vehicle Requests" />
@@ -55,8 +62,10 @@ export default function VehicleList() {
                                     <td className="px-4 py-3">{req.startDate}</td>
                                     <td className="px-4 py-3">{req.endDate}</td>
                                     <td className="px-4 py-3">
-                                        <span className={`inline-block rounded-full px-3 py-1 text-xs font-medium ${statusStyles[req.status]}`}>
-                                            {req.status}
+                                        <span
+                                            className={`inline-block rounded-full px-3 py-1 text-xs font-medium ${statusStyles[req.status] ?? 'bg-gray-100 text-gray-700'}`}
+                                        >
+                                            {formatVehicleStatus(req.status)}
                                         </span>
                                     </td>
                                     <td className="px-4 py-3">

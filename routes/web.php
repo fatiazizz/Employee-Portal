@@ -1,41 +1,37 @@
 <?php
 
-use App\Http\Controllers\Admin\UsersListPageController;
-use App\Http\Controllers\Manager\ManagerUsersListPageController;
-use App\Http\Controllers\Manager\ManagerUsersShowPageController;
+use App\Http\Controllers\Admin\AdminProductRequestsPageController;
 use App\Http\Controllers\Admin\DepartemanListPageController;
-use App\Http\Controllers\Admin\UsersShowPageController;
-use App\Http\Controllers\Admin\WarehouseListPageController;
-use App\Http\Controllers\Admin\VehicleListPageController;
 use App\Http\Controllers\Admin\DriverListPageController;
+use App\Http\Controllers\Admin\UsersListPageController;
+use App\Http\Controllers\Admin\UsersShowPageController;
+use App\Http\Controllers\Admin\VehicleListPageController;
+use App\Http\Controllers\Admin\WarehouseInventoryPageController;
+use App\Http\Controllers\Admin\WarehouseListPageController;
+use App\Http\Controllers\Admin\WarehouseReportPageController;
 use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\Leave\LeaveRequestCreateController;
-use App\Http\Controllers\Leave\LeaveRequestCreatePageController;
-use App\Http\Controllers\Leave\LeaveRequestPageController;
-use App\Http\Controllers\Leave\LeaveRequestShowPageController;
-use App\Http\Controllers\Leave\LeaveStatusController;
-
-use App\Http\Controllers\Recommendation\RecommendationRequestCreateController;
-use App\Http\Controllers\Recommendation\RecommendationRequestCreatePageController;
-use App\Http\Controllers\Recommendation\RecommendationRequestPageController;
-use App\Http\Controllers\Recommendation\RecommendationRequestShowPageController;
-use App\Http\Controllers\Recommendation\RecommendationStatusController;
-
-
 use App\Http\Controllers\Equipment\EquipmentRequestCreateController;
 use App\Http\Controllers\Equipment\EquipmentRequestCreatePageController;
 use App\Http\Controllers\Equipment\EquipmentRequestPageController;
 use App\Http\Controllers\Equipment\EquipmentRequestShowPageController;
 use App\Http\Controllers\Equipment\EquipmentStatusController;
-
+use App\Http\Controllers\Leave\LeaveRequestCreateController;
+use App\Http\Controllers\Leave\LeaveRequestCreatePageController;
+use App\Http\Controllers\Leave\LeaveRequestPageController;
+use App\Http\Controllers\Leave\LeaveRequestShowPageController;
+use App\Http\Controllers\Leave\LeaveStatusController;
+use App\Http\Controllers\Manager\ManagerUsersListPageController;
+use App\Http\Controllers\Manager\ManagerUsersShowPageController;
+use App\Http\Controllers\Recommendation\RecommendationRequestCreateController;
+use App\Http\Controllers\Recommendation\RecommendationRequestCreatePageController;
+use App\Http\Controllers\Recommendation\RecommendationRequestPageController;
+use App\Http\Controllers\Recommendation\RecommendationRequestShowPageController;
+use App\Http\Controllers\Recommendation\RecommendationStatusController;
 use App\Http\Controllers\Vehicle\VehicleRequestCreateController;
 use App\Http\Controllers\Vehicle\VehicleRequestCreatePageController;
 use App\Http\Controllers\Vehicle\VehicleRequestPageController;
 use App\Http\Controllers\Vehicle\VehicleRequestShowPageController;
 use App\Http\Controllers\Vehicle\VehicleStatusController;
-
-
-
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -44,7 +40,6 @@ Route::get('/', function () {
 })->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function () {
-
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
@@ -57,13 +52,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
             */
             Route::get('/', [UsersListPageController::class, 'index'])->name('admin.users.list');
             Route::get('/{id}', [UsersShowPageController::class, 'show'])->name('admin.users.show');
+            Route::post('{id}/reset-password', [UsersShowPageController::class, 'resetPassword'])->name('admin.users.resetPassword');
             Route::post('{id}/manager', [UsersShowPageController::class, 'updateManager'])->name('admin.users.updateManager');
             Route::post('/{id}/make-admin', [UsersShowPageController::class, 'makeAdmin']);
+            Route::post('{id}/revoke-admin', [UsersShowPageController::class, 'revokeAdmin']);
             Route::post('{id}/leave-balance', [UsersShowPageController::class, 'setLeaveBalance']);
             Route::post('{id}/set-manager', [UsersShowPageController::class, 'setManagerStatus']);
             Route::post('{id}/change-status', [UsersShowPageController::class, 'setChangeStatus']);
             Route::post('{id}/change-status-end-job', [UsersShowPageController::class, 'setChangeStatusEndJob']);
             Route::post('{id}/update-job-info', [UsersShowPageController::class, 'setUpdateJobInfo']);
+            Route::delete('{id}', [UsersShowPageController::class, 'destroy'])->name('admin.users.destroy');
         });
         Route::prefix('departments')->group(function () {
             /*
@@ -85,6 +83,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             */
             Route::get('/', [DriverListPageController::class, 'index'])->name('admin.department.list');
             Route::post('create', [DriverListPageController::class, 'create'])->name('admin.department.create');
+            Route::put('/{id}', [DriverListPageController::class, 'update'])->name('admin.driver.update');
             Route::post('/{id}/toggle-status', [DriverListPageController::class, 'toggleStatus']);
 
         });
@@ -97,19 +96,20 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('/', [VehicleListPageController::class, 'index'])->name('admin.vehicles.list');
             Route::post('create', [VehicleListPageController::class, 'create'])->name('admin.vehicles.create');
             Route::put('/{id}/toggle-status', [VehicleListPageController::class, 'toggleStatus']);
+            Route::put('/{id}', [VehicleListPageController::class, 'update'])->name('admin.vehicles.update');
 
         });
         Route::prefix('warehouse')->group(function () {
-            /*
-            |--------------------------------------------------------------------------
-            | Pages (Inertia)
-            |--------------------------------------------------------------------------
-            */
-            Route::get('/', [WarehouseListPageController::class, 'index'])->name('admin.department.list');
-            Route::post('create', [WarehouseListPageController::class, 'create'])->name('admin.department.create');
-            Route::post('/{id}/update-quantity', [WarehouseListPageController::class, 'updateQuantity']);
-
+            Route::get('/', [WarehouseListPageController::class, 'index'])->name('admin.warehouse.index');
+            Route::get('/search-products', [WarehouseListPageController::class, 'searchProductTemplates']);
+            Route::get('/search-countries', [WarehouseListPageController::class, 'searchCountries']);
+            Route::post('/', [WarehouseListPageController::class, 'store'])->name('admin.warehouse.store');
+            Route::put('/{id}', [WarehouseListPageController::class, 'update'])->name('admin.warehouse.update');
+            Route::delete('/{id}', [WarehouseListPageController::class, 'destroy'])->name('admin.warehouse.destroy');
         });
+        Route::get('/warehouse-report', [WarehouseReportPageController::class, 'index'])->name('admin.warehouse.report');
+        Route::get('/warehouse-inventory', [WarehouseInventoryPageController::class, 'index'])->name('admin.warehouse.inventory');
+        Route::get('/product-requests', [AdminProductRequestsPageController::class, 'index'])->name('admin.product-requests.index');
     });
 
     Route::prefix('manager')->group(function () {
@@ -123,7 +123,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('/{id}', [ManagerUsersShowPageController::class, 'show'])->name('manager.users.show');
         });
     });
-
 
     Route::prefix('leave-request')->group(function () {
         /*
@@ -182,7 +181,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/{id}/status', [EquipmentStatusController::class, 'update'])->name('equipment-request.status');
     });
 
-
     Route::prefix('vehicle-request')->group(function () {
         /*
         |--------------------------------------------------------------------------
@@ -203,5 +201,5 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 });
 
-require __DIR__ . '/settings.php';
-require __DIR__ . '/auth.php';
+require __DIR__.'/settings.php';
+require __DIR__.'/auth.php';

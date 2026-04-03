@@ -1,8 +1,11 @@
 import Modal from '@/components/ui/modal';
 import AppLayout from '@/layouts/app-layout';
 import api from '@/lib/axios';
+import InputError from '@/components/input-error';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { type BreadcrumbItem } from '@/types';
-import { Head, usePage } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -11,13 +14,14 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 export default function UserShowPage() {
-    const { user, allUsers, auth, departeman , departeman_user } = usePage<any>().props;
+    const { user, allUsers, auth, departeman, departeman_user, admin_user_count } = usePage<any>().props;
     console.log('user', user);
     console.log('departeman_user', departeman_user);
     const [isModalOpen, setModalOpen] = useState(false);
     const [selectedManagerId, setSelectedManagerId] = useState(user.manager_id);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
     const [showAdminModal, setShowAdminModal] = useState(false);
+    const [showRevokeAdminModal, setShowRevokeAdminModal] = useState(false);
     const [manager, setManager] = useState(user.manager_id);
     const [leaveModalOpen, setLeaveModalOpen] = useState(false);
     const [leaveHours, setLeaveHours] = useState(0);
@@ -29,6 +33,12 @@ export default function UserShowPage() {
     const [selectedDepartmentId, setSelectedDepartmentId] = useState(user.department_id ?? '');
     const [jobTitle, setJobTitle] = useState(user.job_title ?? '');
     const [additionalLeaveHours, setAdditionalLeaveHours] = useState(0);
+    const [resetPasswordModalOpen, setResetPasswordModalOpen] = useState(false);
+    const [resetPassword, setResetPassword] = useState('');
+    const [resetPasswordConfirmation, setResetPasswordConfirmation] = useState('');
+    const [resetPasswordErrors, setResetPasswordErrors] = useState<Record<string, string>>({});
+    const [resetPasswordSubmitting, setResetPasswordSubmitting] = useState(false);
+    const [deleteUserModalOpen, setDeleteUserModalOpen] = useState(false);
 
     useEffect(() => {
     if (departeman_user) {
@@ -79,6 +89,22 @@ export default function UserShowPage() {
         } catch (error) {
             console.error('Failed to make admin:', error);
             alert('An error occurred while updating admin status.');
+        }
+    };
+
+    const handleRevokeAdmin = async () => {
+        try {
+            await api.post(`/admin/users/${user.id}/revoke-admin`);
+            setSuccessMessage('Admin access removed.');
+            setShowRevokeAdminModal(false);
+            setTimeout(() => setSuccessMessage(null), 10000);
+            location.reload();
+        } catch (error: any) {
+            const msg =
+                error?.response?.data?.message ??
+                'An error occurred while removing admin access.';
+            console.error('Failed to revoke admin:', error);
+            alert(msg);
         }
     };
 
@@ -154,6 +180,45 @@ export default function UserShowPage() {
         }
     };
 
+    const handleDeleteUser = () => {
+        router.delete(`/admin/users/${user.id}`);
+    };
+
+    const handleResetPassword = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setResetPasswordErrors({});
+        if (resetPassword !== resetPasswordConfirmation) {
+            setResetPasswordErrors({ password_confirmation: 'The password confirmation does not match.' });
+            return;
+        }
+        setResetPasswordSubmitting(true);
+        try {
+            await api.post(`/admin/users/${user.id}/reset-password`, {
+                password: resetPassword,
+                password_confirmation: resetPasswordConfirmation,
+            });
+            setSuccessMessage('Password reset successfully.');
+            setResetPasswordModalOpen(false);
+            setResetPassword('');
+            setResetPasswordConfirmation('');
+            setTimeout(() => setSuccessMessage(null), 10000);
+        } catch (err: any) {
+            const res = err?.response;
+            if (res?.status === 422 && res?.data?.errors) {
+                const raw = res.data.errors as Record<string, string[]>;
+                const normalized: Record<string, string> = {};
+                for (const [k, v] of Object.entries(raw)) {
+                    normalized[k] = Array.isArray(v) ? v[0] : String(v);
+                }
+                setResetPasswordErrors(normalized);
+            } else {
+                setResetPasswordErrors({ form: res?.data?.message ?? 'Failed to reset password.' });
+            }
+        } finally {
+            setResetPasswordSubmitting(false);
+        }
+    };
+
     return (
         <AppLayout breadcrumbs={[...breadcrumbs, { title: user.name }]}>
             <Head title={`User: ${user.name}`} />
@@ -202,12 +267,31 @@ export default function UserShowPage() {
                     <button className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700" onClick={() => setModalOpen(true)}>
                         Change Manager
                     </button>
-                    {!user.is_admin && auth.user.is_admin === 1 && (
+                    {!user.is_admin && auth.user && (auth.user.is_admin === 1 || auth.user.is_admin === true) && (
                         <button
                             className="mx-2 rounded bg-purple-600 px-4 py-2 text-white hover:bg-purple-700"
                             onClick={() => setShowAdminModal(true)}
                         >
                             Make Admin
+                        </button>
+                    )}
+                    {!!user.is_admin &&
+                        auth.user &&
+                        (auth.user.is_admin === 1 || auth.user.is_admin === true) &&
+                        Number(admin_user_count ?? 0) > 1 && (
+                            <button
+                                className="mx-2 rounded bg-purple-900 px-4 py-2 text-white hover:bg-purple-950"
+                                onClick={() => setShowRevokeAdminModal(true)}
+                            >
+                                Remove admin
+                            </button>
+                        )}
+                    {auth?.user && (auth.user.is_admin === 1 || auth.user.is_admin === true) && (
+                        <button
+                            className="mx-2 rounded bg-amber-600 px-4 py-2 text-white hover:bg-amber-700"
+                            onClick={() => setResetPasswordModalOpen(true)}
+                        >
+                            Reset password
                         </button>
                     )}
 
@@ -243,6 +327,15 @@ export default function UserShowPage() {
                     <button className="mx-2 mt-4 rounded bg-teal-600 px-4 py-2 text-white hover:bg-teal-700" onClick={() => setJobModalOpen(true)}>
                         Set Department & Job Title
                     </button>
+
+                    {auth?.user && auth.user.id !== user.id && (auth.user.is_admin === 1 || auth.user.is_admin === true) && (
+                        <button
+                            className="mx-2 mt-4 rounded bg-red-600 px-4 py-2 text-white hover:bg-red-700"
+                            onClick={() => setDeleteUserModalOpen(true)}
+                        >
+                            Delete user
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -284,6 +377,23 @@ export default function UserShowPage() {
                         </button>
                         <button className="rounded bg-purple-600 px-4 py-2 text-white hover:bg-purple-700" onClick={handleMakeAdmin}>
                             Confirm
+                        </button>
+                    </div>
+                </div>
+            </Modal>
+
+            <Modal show={showRevokeAdminModal} onClose={() => setShowRevokeAdminModal(false)}>
+                <div className="p-6">
+                    <h2 className="mb-4 text-lg font-semibold">Remove admin</h2>
+                    <p className="mb-4 text-sm text-gray-700">
+                        Remove administrator privileges from <strong>{user.name}</strong>? They will retain a normal account.
+                    </p>
+                    <div className="flex justify-end gap-3">
+                        <button className="rounded px-4 py-2 text-gray-600 hover:text-gray-800" onClick={() => setShowRevokeAdminModal(false)}>
+                            Cancel
+                        </button>
+                        <button className="rounded bg-purple-900 px-4 py-2 text-white hover:bg-purple-950" onClick={handleRevokeAdmin}>
+                            Remove admin
                         </button>
                     </div>
                 </div>
@@ -368,6 +478,80 @@ export default function UserShowPage() {
                         </button>
                         <button className="rounded bg-red-600 px-4 py-2 text-white hover:bg-red-700" onClick={handleEndEmployment}>
                             Confirm
+                        </button>
+                    </div>
+                </div>
+            </Modal>
+
+            <Modal show={resetPasswordModalOpen} onClose={() => !resetPasswordSubmitting && setResetPasswordModalOpen(false)}>
+                <div className="p-6">
+                    <h2 className="mb-2 text-lg font-semibold">Reset password</h2>
+                    <p className="mb-4 text-sm text-gray-600">
+                        Set a new password for <strong>{user.name}</strong>. They can change it later in Settings.
+                    </p>
+                    <form onSubmit={handleResetPassword} className="space-y-4">
+                        <div>
+                            <Label htmlFor="admin-reset-password">New password</Label>
+                            <Input
+                                id="admin-reset-password"
+                                type="password"
+                                value={resetPassword}
+                                onChange={(e) => setResetPassword(e.target.value)}
+                                className="mt-1 block w-full"
+                                autoComplete="new-password"
+                                required
+                            />
+                            <InputError message={resetPasswordErrors?.password} className="mt-1" />
+                        </div>
+                        <div>
+                            <Label htmlFor="admin-reset-password-confirmation">Confirm password</Label>
+                            <Input
+                                id="admin-reset-password-confirmation"
+                                type="password"
+                                value={resetPasswordConfirmation}
+                                onChange={(e) => setResetPasswordConfirmation(e.target.value)}
+                                className="mt-1 block w-full"
+                                autoComplete="new-password"
+                                required
+                            />
+                            <InputError message={resetPasswordErrors?.password_confirmation} className="mt-1" />
+                        </div>
+                        {resetPasswordErrors?.form && (
+                            <p className="text-sm text-red-600">{resetPasswordErrors.form}</p>
+                        )}
+                        <div className="flex justify-end gap-2 pt-2">
+                            <button
+                                type="button"
+                                onClick={() => setResetPasswordModalOpen(false)}
+                                disabled={resetPasswordSubmitting}
+                                className="rounded px-4 py-2 text-gray-600 hover:bg-gray-100 disabled:opacity-50"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="submit"
+                                disabled={resetPasswordSubmitting}
+                                className="rounded bg-amber-600 px-4 py-2 text-white hover:bg-amber-700 disabled:opacity-50"
+                            >
+                                {resetPasswordSubmitting ? 'Saving…' : 'Reset password'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </Modal>
+
+            <Modal show={deleteUserModalOpen} onClose={() => setDeleteUserModalOpen(false)}>
+                <div className="p-6">
+                    <h2 className="mb-4 text-lg font-semibold">Delete user</h2>
+                    <p className="mb-4 text-sm text-gray-700">
+                        Are you sure you want to permanently delete <strong>{user.name}</strong>? This action cannot be undone.
+                    </p>
+                    <div className="flex justify-end gap-3">
+                        <button className="rounded px-4 py-2 text-gray-600 hover:text-gray-800" onClick={() => setDeleteUserModalOpen(false)}>
+                            Cancel
+                        </button>
+                        <button className="rounded bg-red-600 px-4 py-2 text-white hover:bg-red-700" onClick={handleDeleteUser}>
+                            Delete
                         </button>
                     </div>
                 </div>
