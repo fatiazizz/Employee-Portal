@@ -63,9 +63,10 @@ def pytest_runtest_makereport(item, call):
 
 
 @pytest.fixture(autouse=True)
-def capture_on_failure(request, driver, screenshot_dir):
+def capture_screenshot(request, driver, screenshot_dir):
+    """Save a PNG per test after each run (pass or fail) for evidence/reporting."""
     yield
     rep = getattr(request.node, "rep_call", None)
-    if rep and rep.failed:
+    if rep and rep.when == "call":
         output = screenshot_dir / f"{request.node.name}.png"
         driver.save_screenshot(str(output))

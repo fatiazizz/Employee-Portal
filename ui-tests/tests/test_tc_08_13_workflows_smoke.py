@@ -1,3 +1,4 @@
+from pages.inertia_nav import open_link_by_href_or_click, wait_url_contains
 from pages.login_page import LoginPage
 from pages.selectors import Sel
 
@@ -19,7 +20,8 @@ def login_mgr(driver, cfg):
 def test_tc_08_leave_request_page_open(driver, cfg):
     login_emp(driver, cfg)
     driver.get(f"{cfg['base_url']}/leave-request")
-    driver.find_element(*Sel.NEW_LEAVE).click()
+    open_link_by_href_or_click(driver, Sel.NEW_LEAVE)
+    wait_url_contains(driver, "leave-request/create")
     assert "/leave-request/create" in driver.current_url
 
 
@@ -32,14 +34,16 @@ def test_tc_09_leave_manager_flow_page_open(driver, cfg):
 def test_tc_10_vehicle_request_page_open(driver, cfg):
     login_emp(driver, cfg)
     driver.get(f"{cfg['base_url']}/vehicle-request")
-    driver.find_element(*Sel.NEW_VEHICLE).click()
+    open_link_by_href_or_click(driver, Sel.NEW_VEHICLE)
+    wait_url_contains(driver, "vehicle-request/create")
     assert "/vehicle-request/create" in driver.current_url
 
 
 def test_tc_12_recommendation_request_page_open(driver, cfg):
     login_emp(driver, cfg)
     driver.get(f"{cfg['base_url']}/recommendation-request")
-    driver.find_element(*Sel.NEW_RECOMMENDATION).click()
+    open_link_by_href_or_click(driver, Sel.NEW_RECOMMENDATION)
+    wait_url_contains(driver, "recommendation-request/create")
     assert "/recommendation-request/create" in driver.current_url
 
 

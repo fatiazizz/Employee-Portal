@@ -47,6 +47,8 @@ Save output for the test report:
 pytest -v > evidence\test-run.txt
 ```
 
-Failed tests automatically save screenshots to:
+Each test saves a screenshot after it finishes (pass or fail) to:
 
 `ui-tests/evidence/screenshots/`
+
+(File name matches the pytest node name, e.g. `test_tc_01_valid_user_login.png`.)
